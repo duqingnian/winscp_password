@@ -7,3 +7,11 @@ Plain   : my_test_password_123_$#@
 Crypted : A35C755C2E3333286D656E726D6A64726D6E726F6831250328392F28032C3D2F2F2B332E38036D6E6F03787F1C
 
 Decrypted: my_test_password_123_$#@
+
+#设置密码保存为ini
+
+![设置密码保存为ini](winscp_setting.png)
+
+#提取出来的代码结果
+
+![提取出来的代码结果](winscp_cmd.png)
