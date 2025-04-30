@@ -10,8 +10,8 @@ Decrypted: my_test_password_123_$#@
 
 # 设置密码保存为 ini
 
-![设置密码保存为ini](./winscp_setting.png)
+![设置密码保存为ini](./setting.png)
 
 # 提取出来的代码结果
 
-![提取出来的代码结果](./winscp_cmd.png)
+![提取出来的代码结果](./cmd.png)
