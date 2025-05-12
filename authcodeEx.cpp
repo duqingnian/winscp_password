@@ -2,6 +2,9 @@
 #include <sstream>
 #include <iomanip>
 #include <iostream>
+#include <chrono>
+#include <random>
+#include <thread>
 
 using namespace std;
 typedef unsigned char uchar;
@@ -9,7 +12,7 @@ typedef unsigned char uchar;
 #define PW_MAGIC  0xA3
 #define PW_FLAG   0xFF
 
-// ¡ª¡ª¡ª Ô­°æ²»¶¯ ¡ª¡ª¡ª
+// â€”â€”â€” åŸç‰ˆä¸åŠ¨ â€”â€”â€”
 int dec_next_char(string& s) {
     if (s.length() < 2) return 0;
     const string base = "0123456789ABCDEF";
@@ -27,40 +30,40 @@ string decrypt(string pwd, string key) {
     flag = dec_next_char(pwd);
 
     if (flag == PW_FLAG) {
-        dec_next_char(pwd);          // Ìø¹ı ¡°dummy¡± ×Ö½Ú
-        length = dec_next_char(pwd); // ÕæÕıµÄÊı¾İ³¤¶È
+        dec_next_char(pwd);          // è·³è¿‡ â€œdummyâ€ å­—èŠ‚
+        length = dec_next_char(pwd); // çœŸæ­£çš„æ•°æ®é•¿åº¦
     }
     else {
         length = flag;
     }
 
-    // Ìø¹ı offset ¸ö×Ö·û
+    // è·³è¿‡ offset ä¸ªå­—ç¬¦
     pwd.erase(0, (dec_next_char(pwd)) * 2);
 
-    // È¡³ö length ¸öÃ÷ÎÄ×Ö½Ú
+    // å–å‡º length ä¸ªæ˜æ–‡å­—èŠ‚
     for (int i = 0; i < length; i++)
         clearpwd += (char)dec_next_char(pwd);
 
-    // Ğ£Ñé²¢°şÀë key
+    // æ ¡éªŒå¹¶å‰¥ç¦» key
     if (flag == PW_FLAG) {
         if (clearpwd.substr(0, key.length()) != key)
-            return "";               // Ç°×º²»¶Ô¾Í¿Õ
+            return "";               // å‰ç¼€ä¸å¯¹å°±ç©º
         clearpwd.erase(0, key.length());
     }
     return clearpwd;
 }
-// ¡ª¡ª¡ª  end Ô­°æ ¡ª¡ª¡ª
+// â€”â€”â€”  end åŸç‰ˆ â€”â€”â€”
 
 
 
-// ¡ª¡ª¡ª ÕıÈ·µÄ encrypt ¡ª¡ª ÍêÈ«¶Ô³ÆÉÏÃæµÄ decrypt ¡ª¡ª 
+// â€”â€”â€” æ­£ç¡®çš„ encrypt â€”â€” å®Œå…¨å¯¹ç§°ä¸Šé¢çš„ decrypt â€”â€” 
 string encrypt(const string& password, const string& key) {
-    // ÏÈ°Ñ key+password Æ´ÔÚÒ»Æğ
+    // å…ˆæŠŠ key+password æ‹¼åœ¨ä¸€èµ·
     string full = key + password;
     string result;
     stringstream ss;
 
-    // 1) Ğ´Èë enc_flag = ~(PW_FLAG ^ PW_MAGIC)
+    // 1) å†™å…¥ enc_flag = ~(PW_FLAG ^ PW_MAGIC)
     {
         uchar enc_flag = (uchar)~((PW_FLAG) ^ PW_MAGIC);
         ss.str(""); ss.clear();
@@ -68,7 +71,7 @@ string encrypt(const string& password, const string& key) {
         result += ss.str();
     }
 
-    // 2) Ğ´Èë dummy=0 µÄ¼ÓÃÜ
+    // 2) å†™å…¥ dummy=0 çš„åŠ å¯†
     {
         uchar enc_dummy = (uchar)~(0 ^ PW_MAGIC);
         ss.str(""); ss.clear();
@@ -76,7 +79,7 @@ string encrypt(const string& password, const string& key) {
         result += ss.str();
     }
 
-    // 3) Ğ´Èë length ×Ö¶Î
+    // 3) å†™å…¥ length å­—æ®µ
     {
         uchar len = (uchar)full.length();
         uchar enc_len = (uchar)~(len ^ PW_MAGIC);
@@ -85,15 +88,15 @@ string encrypt(const string& password, const string& key) {
         result += ss.str();
     }
 
-    // 4) Ğ´Èë offset£¨ÎÒÃÇ¹Ì¶¨ 0£©
+    // 4) å†™å…¥ offsetï¼ˆæˆ‘ä»¬å›ºå®š 0ï¼‰
     {
         uchar enc_off = (uchar)~(0 ^ PW_MAGIC);
         ss.str(""); ss.clear();
         ss << hex << uppercase << setw(2) << setfill('0') << (int)enc_off;
        result += ss.str();    }
-        // 5) £¨offset=0£¬ËùÒÔ²»²¹ÈÎºÎÎ±Ôì×Ö½Ú£©
+        // 5) ï¼ˆoffset=0ï¼Œæ‰€ä»¥ä¸è¡¥ä»»ä½•ä¼ªé€ å­—èŠ‚ï¼‰
 
-    // 6) Ğ´Èë key+password µÄÃ¿¸ö×Ö·û
+    // 6) å†™å…¥ key+password çš„æ¯ä¸ªå­—ç¬¦
     for (unsigned char ch : full) {
         uchar enc_ch = (uchar)~(ch ^ PW_MAGIC);
         ss.str(""); ss.clear();
@@ -103,21 +106,116 @@ string encrypt(const string& password, const string& key) {
 
     return result;
 }
-// ¡ª¡ª¡ª end encrypt ¡ª¡ª¡ª
+// â€”â€”â€” end encrypt â€”â€”â€”
 
 
+struct RandomOption {
+    size_t length = 16;              // é•¿åº¦
+    bool useLowercase = true;        // å°å†™å­—æ¯
+    bool useUppercase = true;        // å¤§å†™å­—æ¯
+    bool useDigits = true;           // æ•°å­—
+    bool useSymbols = false;         // ç‰¹æ®Šå­—ç¬¦
+    std::string extraChars = "";     // è‡ªå®šä¹‰å­—ç¬¦ï¼ˆå¯é€‰ï¼‰
+};
+std::string generateRandom(const RandomOption& opt) {
+    std::string charset;
+    if (opt.useLowercase) charset += "abcdefghijklmnopqrstuvwxyz";
+    if (opt.useUppercase) charset += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    if (opt.useDigits)    charset += "0123456789";
+    if (opt.useSymbols)   charset += "!@#$%^&*()-_=+[]{}|;:,.<>?";
+    charset += opt.extraChars;
+
+    if (charset.empty()) return "";
+
+    auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    std::mt19937 gen(static_cast<unsigned int>(seed));
+    std::uniform_int_distribution<> dist(0, charset.size() - 1);
+
+    std::string result;
+    for (size_t i = 0; i < opt.length; ++i)
+        result += charset[dist(gen)];
+
+    return result;
+}
+
+// æ ¼å¼åŒ–æ—¶é—´æˆ³ä¸º yyyy-MM-dd HH:mm:ss:SSS
+string formatTimePoint(const chrono::system_clock::time_point& tp) {
+    auto in_time_t = chrono::system_clock::to_time_t(tp);
+    auto ms = chrono::duration_cast<chrono::milliseconds>(tp.time_since_epoch()) % 1000;
+
+    std::tm bt;
+#ifdef _WIN32
+    localtime_s(&bt, &in_time_t);
+#else
+    localtime_r(&in_time_t, &bt);
+#endif
+
+    stringstream ss;
+    ss << put_time(&bt, "%Y-%m-%d %H:%M:%S")
+        << ":" << setfill('0') << setw(3) << ms.count();
+    return ss.str();
+}
+
+// æ ¼å¼åŒ–æ¯«ç§’æ—¶é•¿ä¸º Xç§’Yæ¯«ç§’
+string formatDuration(int64_t ms) {
+    int sec = static_cast<int>(ms / 1000);
+    int ms_remain = static_cast<int>(ms % 1000);
+    stringstream ss;
+    ss << sec << "s" << ms_remain << "ms";
+    return ss.str();
+}
 
 int main() {
     string user = "root";
     string host = "192.168.12.34";
     string key = user + host;
 
-    string password = "my_test_password_123_$#@";
-    string crypted = encrypt(password, key);
-    string plain = decrypt(crypted, key);
+    RandomOption opt;
+    opt.length = 64;
+    opt.useLowercase = true;
+    opt.useUppercase = true;
+    opt.useDigits = true;
+    opt.useSymbols = true;
+    opt.extraChars = "#~-_";
 
-    cout << "Plain   : " << password << "\n"
-        << "Crypted : " << crypted << "\n"
-        << "Decrypted: " << plain << endl;
+    int matchCount = 0, mismatchCount = 0;
+
+    auto startClock = chrono::steady_clock::now();
+    auto startTime = chrono::system_clock::now();
+
+    int loop_count = 100;
+
+    for (int i = 1; i <= loop_count; ++i)
+    {
+        string password = generateRandom(opt);
+        string crypted = encrypt(password, key);
+        string plain = decrypt(crypted, key);
+        bool match = (password == plain);
+
+        if (match) matchCount++;
+        else mismatchCount++;
+
+        cout << "===== Test #" << i << " =====\n"
+            << "Plain     : " << password << "\n"
+            << "Encrypted : " << crypted << "\n"
+            << "Decrypted : " << plain << "\n"
+            << "Match     : " << (match ? "......Yes" : "......No") << "\n\n";
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+
+    auto endClock = chrono::steady_clock::now();
+    auto endTime = chrono::system_clock::now();
+    auto durationMs = chrono::duration_cast<chrono::milliseconds>(endClock - startClock).count();
+
+    cout << "================== Summary ==================\n";
+    cout << "Total Tests   : "<< loop_count <<"\n";
+    cout << "Match Count   : " << matchCount << "\n";
+    cout << "Mismatch Count: " << mismatchCount << "\n";
+    cout << "Start Time    : " << formatTimePoint(startTime) << "\n";
+    cout << "End Time      : " << formatTimePoint(endTime) << "\n";
+    cout << "Total Duration: " << formatDuration(durationMs) << "\n";
+
+
     return 0;
 }
