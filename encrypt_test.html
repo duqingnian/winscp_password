@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Encrypt Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+    pre  { background: #fff; padding: 10px; border: 1px solid #ccc; max-height: 600px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h2>Encrypt Test (Browser Version)</h2>
+  <button onclick="runTests()">Run 10 Tests</button>
+  <pre id="output"></pre>
+
+  <script>
+    const PW_MAGIC = 0xA3;
+    const PW_FLAG = 0xFF;
+
+    function encByte(b) {
+      let enc = (~(b ^ PW_MAGIC)) & 0xFF;
+      return enc.toString(16).toUpperCase().padStart(2, '0');
+    }
+
+    function decNextChar(s) {
+      const base = '0123456789ABCDEF';
+      const a = base.indexOf(s[0]);
+      const b = base.indexOf(s[1]);
+      s.splice(0, 2);
+      return (~((a << 4) + b) ^ PW_MAGIC) & 0xFF;
+    }
+
+    function encrypt(password, key) {
+      const full = key + password;
+      let result = '';
+      result += encByte(PW_FLAG);
+      result += encByte(0); // dummy
+      result += encByte(full.length);
+      result += encByte(0); // offset
+      for (let ch of full) {
+        result += encByte(ch.charCodeAt(0));
+      }
+      return result;
+    }
+
+    function decrypt(hexStr, key) {
+      const s = hexStr.split('');
+      let clear = '';
+      let flag = decNextChar(s);
+      let length;
+
+      if (flag === PW_FLAG) {
+        decNextChar(s); // dummy
+        length = decNextChar(s);
+      } else {
+        length = flag;
+      }
+
+      const offset = decNextChar(s);
+      s.splice(0, offset * 2);
+
+      for (let i = 0; i < length; i++) {
+        clear += String.fromCharCode(decNextChar(s));
+      }
+
+      if (flag === PW_FLAG) {
+        if (!clear.startsWith(key)) return '';
+        return clear.slice(key.length);
+      }
+      return clear;
+    }
+
+    function generateRandom(opt) {
+      let charset = '';
+      if (opt.useLowercase) charset += 'abcdefghijklmnopqrstuvwxyz';
+      if (opt.useUppercase) charset += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      if (opt.useDigits) charset += '0123456789';
+      if (opt.useSymbols) charset += '!@#$%^&*()-_=+[]{}|;:,.<>?';
+      charset += opt.extraChars;
+
+      let result = '';
+      for (let i = 0; i < opt.length; i++) {
+        result += charset.charAt(Math.floor(Math.random() * charset.length));
+      }
+      return result;
+    }
+
+    function formatTime() {
+      const now = new Date();
+      return now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0') + ' ' +
+        String(now.getHours()).padStart(2, '0') + ':' +
+        String(now.getMinutes()).padStart(2, '0') + ':' +
+        String(now.getSeconds()).padStart(2, '0') + ':' +
+        String(now.getMilliseconds()).padStart(3, '0');
+    }
+
+    async function runTests() {
+      const output = document.getElementById('output');
+      output.textContent = '';
+      const user = "root";
+      const host = "192.168.12.34";
+      const key = user + host;
+
+      const opt = {
+        length: 64,
+        useLowercase: true,
+        useUppercase: true,
+        useDigits: true,
+        useSymbols: true,
+        extraChars: '#~-_'
+      };
+
+      let matchCount = 0;
+      let mismatchCount = 0;
+      const loopCount = 10;
+
+      const start = performance.now();
+      output.textContent += "Start Time    : " + formatTime() + "\n";
+
+      for (let i = 1; i <= loopCount; i++) {
+        const password = generateRandom(opt);
+        const encrypted = encrypt(password, key);
+        const decrypted = decrypt(encrypted, key);
+        const match = (password === decrypted);
+        if (match) matchCount++; else mismatchCount++;
+
+        output.textContent += `===== Test #${i} =====\n`;
+        output.textContent += `Plain     : ${password}\n`;
+        output.textContent += `Encrypted : ${encrypted}\n`;
+        output.textContent += `Decrypted : ${decrypted}\n`;
+        output.textContent += `Match     : ${match ? "......Yes" : "......No"}\n\n`;
+
+        await new Promise(resolve => setTimeout(resolve, 100)); // sleep 100ms
+      }
+
+      const end = performance.now();
+      const duration = end - start;
+
+      output.textContent += "End Time      : " + formatTime() + "\n";
+      output.textContent += "Total Duration: " + Math.floor(duration / 1000) + "s" + Math.floor(duration % 1000) + "ms\n";
+      output.textContent += "Match Count   : " + matchCount + "\n";
+      output.textContent += "Mismatch Count: " + mismatchCount + "\n";
+    }
+  </script>
+</body>
+</html>
