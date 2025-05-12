@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Encrypt & Verify</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    input[type=text] { width: 300px; padding: 5px; }
+    button { padding: 6px 12px; }
+    #result { margin-top: 20px; white-space: pre-wrap; background: #f0f0f0; padding: 10px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+
+  <h2>字符串加密并验证</h2>
+  <input type="text" id="plainText" placeholder="请输入字符串">
+  <button onclick="submitData()">提交</button>
+
+  <div id="result"></div>
+
+  <script>
+    const PW_MAGIC = 0xA3;
+    const PW_FLAG = 0xFF;
+    const key = "root192.168.12.34";
+
+    function encByte(b) {
+      let enc = (~(b ^ PW_MAGIC)) & 0xFF;
+      return enc.toString(16).toUpperCase().padStart(2, '0');
+    }
+
+    function encrypt(password, key) {
+      const full = key + password;
+      let result = "";
+      result += encByte(PW_FLAG);     // flag
+      result += encByte(0);           // dummy
+      result += encByte(full.length); // length
+      result += encByte(0);           // offset
+      for (let ch of full) {
+        result += encByte(ch.charCodeAt(0));
+      }
+      return result;
+    }
+
+    function submitData() {
+      const plain = document.getElementById("plainText").value;
+      if (!plain) return alert("请输入内容");
+
+      const encrypted = encrypt(plain, key);
+
+      fetch("http://localhost/decode_api.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "data=" + encodeURIComponent(encrypted)
+      })
+      .then(res => res.json())
+      .then(json => {
+        const decrypted = json.decrypted;
+        const match = decrypted === plain;
+        document.getElementById("result").innerText =
+          `原始输入: ${plain}\n` +
+          `加密内容: ${encrypted}\n` +
+          `解密结果: ${decrypted}\n` +
+          `是否一致: ${match ? "✔ 一致" : "❌ 不一致"}`;
+      })
+      .catch(err => {
+        document.getElementById("result").innerText = "请求失败: " + err;
+      });
+    }
+  </script>
+</body>
+</html>
